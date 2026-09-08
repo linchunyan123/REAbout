@@ -1,15 +1,23 @@
 [build]
-  base = "REAbout"
-  command = "npm run build"
-  publish = "dist"
+  base = "."
+  command = "npm run setup && npm run build"
+  publish = "REAbout/dist"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "24"
 
 [functions]
-  directory = "../REAbout-server/functions"
+  directory = "REAbout-server/functions"
+  node_bundler = "esbuild"
+  external_node_modules = ["pg"]
 
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200

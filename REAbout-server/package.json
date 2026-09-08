@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "node --env-file=.env --watch src/server.js",
     "start": "node --env-file=.env src/server.js",
@@ -11,5 +13,10 @@
     "test": "node --test",
     "test:integration": "node --env-file=.env scripts/integration.js"
   },
-  "dependencies": { "express": "^5.1.0", "pg": "^8.16.3", "helmet": "^8.1.0" }
+  "dependencies": {
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "pg": "^8.16.3",
+    "serverless-http": "^4.0.0"
+  }
 }

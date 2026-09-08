@@ -5,15 +5,15 @@ import { validateTask, validateSettings, invalid } from './validation.js'
 
 const columns = `id, title, description, status, priority, to_char(due_date, 'YYYY-MM-DD') AS "dueDate", created_at AS "createdAt"`
 
-export function createApp(db) {
+export function createApp(db, { serveFrontend = process.env.NODE_ENV === 'production' } = {}) {
   const app = express()
   app.disable('x-powered-by')
   app.use(helmet())
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store')
     if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-      const allowedOrigin = process.env.APP_ORIGIN || 'http://localhost:5173'
-      if (req.headers.origin && req.headers.origin !== allowedOrigin) return res.status(403).json({ message: '请求来源不允许' })
+      const allowedOrigins = [process.env.APP_ORIGIN || 'http://localhost:5173', process.env.URL, process.env.DEPLOY_URL, process.env.DEPLOY_PRIME_URL].filter(Boolean)
+      if (req.headers.origin && !allowedOrigins.includes(req.headers.origin)) return res.status(403).json({ message: '请求来源不允许' })
       if (!req.is('application/json')) return res.status(415).json({ message: '请使用 application/json' })
     }
     next()
@@ -61,7 +61,7 @@ export function createApp(db) {
     res.json(s)
   })
   app.use('/api', (_req, res) => res.status(404).json({ message: '接口不存在' }))
-  if (process.env.NODE_ENV === 'production') {
+  if (serveFrontend) {
     const dist = fileURLToPath(new URL('../../REAbout/dist/', import.meta.url))
     app.use(express.static(dist))
     app.get('/{*path}', (_req, res) => res.sendFile(`${dist}/index.html`))

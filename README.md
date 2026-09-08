@@ -62,6 +62,23 @@ npm run test:integration
 
 ## 本机生产模式预览
 
+### Netlify 部署
+
+仓库根目录的 `netlify.toml` 已配置前后端依赖安装、前端构建和统一 `api` 云函数。Netlify 不会运行本地 `npm start`；`REAbout-server/functions/api.mjs` 将 Express 接口转换成云函数。
+
+1. 连接整个仓库，将 Base directory 设为根目录（留空或 `.`），不要继续指向 `REAbout`。构建配置以根目录 `netlify.toml` 为准。
+2. 在 Netlify 项目环境变量中设置 `DATABASE_URL`（使用本地后端 `.env` 中的连接串，标记为敏感变量，必须对 Functions 和目标部署环境生效）。不要添加 `VITE_` 前缀，不要提交 `.env`。
+3. 设置 `APP_ORIGIN` 为实际访问的网址 origin，例如 `https://incomparable-kitsune-e75f0e.netlify.app`，不带路径和末尾斜杠。若使用独立预览网址且遇到 403，则对该部署环境配置对应 origin。接口也允许运行时可用的 Netlify `URL`、`DEPLOY_URL`、`DEPLOY_PRIME_URL` 精确地址。
+4. 提交并推送修改后重新部署。检查 Functions 中存在 `api`，访问新部署的 `/api/health`，应返回 `{"status":"ok","database":"connected"}`。
+
+数据库已经初始化；不需要每次网站构建都连接数据库或执行迁移。旧的带部署 ID 的固定网址不会变成新版本，请访问新部署地址或站点主域名。
+
+404 表示函数/转发缺失；函数启动错误应检查 `DATABASE_URL` 是否配置；503 应检查数据库连接和表结构；写入返回 403 应检查 `APP_ORIGIN`。
+
+部署仅提供现有单工作区功能，仍需保持站点访问限制；发布到公网前应实现身份认证。
+
+### 本机运行
+
 ```powershell
 npm run build
 $env:NODE_ENV = 'production'
