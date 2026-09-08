@@ -8,7 +8,7 @@ const statusLabels: Record<TaskStatus, string> = { todo: '待处理', 'in-progre
 const priorityLabels: Record<TaskPriority, string> = { low: '低', medium: '中', high: '高' }
 
 export function DashboardPage() {
-  const { tasks } = useTasks()
+  const { tasks, settings } = useTasks()
   const completed = tasks.filter((task) => task.status === 'done').length
   const inProgress = tasks.filter((task) => task.status === 'in-progress').length
   const upcoming = tasks.filter((task) => task.status !== 'done').slice(0, 4)
@@ -17,7 +17,7 @@ export function DashboardPage() {
   return (
     <div className="dashboard-stack">
       <section className="welcome-band">
-        <div><span className="eyebrow">星期{getWeekday()} · {formatToday()}</span><h2>早上好，林小北</h2><p>今天有 {tasks.filter((task) => task.status !== 'done').length} 项任务需要关注，先从最重要的开始。</p></div>
+        <div><span className="eyebrow">星期{getWeekday()} · {formatToday()}</span><h2>你好，{settings?.name || "我的工作区"}</h2><p>今天有 {tasks.filter((task) => task.status !== 'done').length} 项任务需要关注，先从最重要的开始。</p></div>
         <Link to="/tasks" className="button light"><Plus size={18} />新建任务</Link>
       </section>
 
@@ -44,18 +44,17 @@ export function DashboardPage() {
         </section>
 
         <section className="panel progress-panel">
-          <div className="panel-header"><div><h2>本周目标</h2><p>任务完成情况</p></div></div>
+          <div className="panel-header"><div><h2>任务完成进度</h2><p>任务完成情况</p></div></div>
           <div className="progress-visual"><div className="progress-circle" style={{ '--progress': `${completionRate * 3.6}deg` } as CSSProperties}><span>{completionRate}%</span><small>完成</small></div></div>
           <div className="progress-legend"><div><span className="legend-dot green" /><span>已完成</span><strong>{completed}</strong></div><div><span className="legend-dot amber" /><span>进行中</span><strong>{inProgress}</strong></div><div><span className="legend-dot gray" /><span>待处理</span><strong>{tasks.length - completed - inProgress}</strong></div></div>
         </section>
       </div>
 
       <section className="panel activity-panel">
-        <div className="panel-header"><div><h2>最近动态</h2><p>团队工作区的最新变化</p></div></div>
+        <div className="panel-header"><div><h2>最近动态</h2><p>按创建时间显示最近任务</p></div></div>
         <div className="activity-list">
-          <Activity initials="陈" color="coral" text={<><strong>陈安</strong> 完成了任务「检查移动端适配」</>} time="18 分钟前" />
-          <Activity initials="周" color="blue" text={<><strong>周然</strong> 在「整理本周产品需求」中添加了评论</>} time="1 小时前" />
-          <Activity initials="林" color="green" text={<><strong>你</strong> 创建了任务「准备周会数据」</>} time="昨天 16:40" />
+          {tasks.slice(0, 3).map(task => <Activity key={task.id} initials={settings?.name.slice(0, 1) || '我'} color="green" text={<>创建任务「{task.title}」</>} time={new Date(task.createdAt).toLocaleString('zh-CN')} />)}
+          {!tasks.length && <p className="empty-inline">暂无任务记录</p>}
         </div>
       </section>
     </div>

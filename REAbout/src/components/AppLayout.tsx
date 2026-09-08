@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  Bell,
   CheckSquare2,
   LayoutDashboard,
   Menu,
@@ -11,6 +10,8 @@ import {
   X,
 } from 'lucide-react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useTasks } from '../contexts/TaskContext'
+import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../contexts/ThemeContext'
 
 const navigation = [
@@ -26,6 +27,9 @@ const titles: Record<string, { title: string; subtitle: string }> = {
 }
 
 export function AppLayout() {
+  const { tasks, settings, loading, error, reload } = useTasks()
+  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const { pathname } = useLocation()
   const { theme, toggleTheme } = useTheme()
@@ -53,15 +57,15 @@ export function AppLayout() {
         </nav>
 
         <div className="sidebar-summary">
-          <div className="summary-ring" aria-hidden="true">68%</div>
+          <div className="summary-ring" aria-hidden="true">{tasks.length ? Math.round(tasks.filter(task => task.status === 'done').length / tasks.length * 100) : 0}%</div>
           <div>
-            <strong>本周进度</strong>
+            <strong>任务进度</strong>
             <span>继续保持节奏</span>
           </div>
         </div>
         <div className="user-panel">
-          <div className="avatar">林</div>
-          <div><strong>林小北</strong><span>产品团队</span></div>
+          <div className="avatar">{settings?.name.slice(0, 1) || "我"}</div>
+          <div><strong>{settings?.name || "我的工作区"}</strong><span>{settings?.position || "个人工作区"}</span></div>
         </div>
       </aside>
 
@@ -79,18 +83,15 @@ export function AppLayout() {
           <div className="topbar-actions">
             <label className="quick-search">
               <Search size={17} />
-              <input type="search" placeholder="快速搜索" aria-label="快速搜索" />
-              <kbd>⌘ K</kbd>
+              <input type="search" placeholder="搜索后按回车" aria-label="快速搜索" value={search} onChange={event => setSearch(event.target.value)} onKeyDown={event => { if (event.key === "Enter") navigate(`/tasks?q=${encodeURIComponent(search)}`) }} />
+              <kbd>Enter</kbd>
             </label>
             <button className="icon-button" onClick={toggleTheme} aria-label={theme === 'light' ? '切换到深色模式' : '切换到浅色模式'} title="切换主题">
               {theme === 'light' ? <Moon size={19} /> : <Sun size={19} />}
             </button>
-            <button className="icon-button notification-button" aria-label="查看通知" title="通知">
-              <Bell size={19} /><span />
-            </button>
           </div>
         </header>
-        <div className="page-content"><Outlet /></div>
+        <div className="page-content">{loading ? <p role="status">正在加载云端数据…</p> : error ? <div role="alert"><p>{error}</p><button className="button primary" onClick={() => void reload()}>重新加载</button></div> : <Outlet />}</div>
       </main>
     </div>
   )

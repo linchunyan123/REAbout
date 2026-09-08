@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 import { CalendarDays, Check, Circle, ClipboardList, Edit3, MoreHorizontal, Plus, Search, Trash2 } from 'lucide-react'
 import { TaskForm } from '../components/TaskForm'
@@ -11,10 +12,22 @@ type Filter = 'all' | TaskStatus
 export function TasksPage() {
   const { tasks, addTask, updateTask, deleteTask, setTaskStatus } = useTasks()
   const [filter, setFilter] = useState<Filter>('all')
-  const [query, setQuery] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const query = searchParams.get('q') || ''
+  const setQuery = (value: string) => setSearchParams(value ? { q: value } : {}, { replace: true })
   const [formOpen, setFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | undefined>()
   const [menuId, setMenuId] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState('')
+  const runAction = async (action: () => Promise<void>) => {
+    if (pending) return
+    setPending(true)
+    setError('')
+    try { await action(); setMenuId(null) }
+    catch (err) { setError((err as Error).message) }
+    finally { setPending(false) }
+  }
 
   const filteredTasks = useMemo(() => tasks.filter((task) => {
     const matchesStatus = filter === 'all' || task.status === filter
@@ -25,14 +38,15 @@ export function TasksPage() {
 
   const openEdit = (task: Task) => { setEditingTask(task); setFormOpen(true); setMenuId(null) }
   const closeForm = () => { setFormOpen(false); setEditingTask(undefined) }
-  const submitForm = (input: TaskInput) => {
-    if (editingTask) updateTask(editingTask.id, input)
-    else addTask(input)
+  const submitForm = async (input: TaskInput) => {
+    if (editingTask) await updateTask(editingTask.id, input)
+    else await addTask(input)
     closeForm()
   }
 
   return (
     <div className="tasks-page">
+      {error && <p role="alert" className="field-error">{error}</p>}
       <div className="task-toolbar">
         <div className="filter-tabs" role="tablist" aria-label="任务状态筛选">
           {([['all', '全部'], ['todo', '待处理'], ['in-progress', '进行中'], ['done', '已完成']] as const).map(([value, label]) => (
@@ -46,9 +60,9 @@ export function TasksPage() {
         <div className="list-toolbar"><label className="list-search"><Search size={17} /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索任务..." aria-label="搜索任务" /></label><span>显示 {filteredTasks.length} 项任务</span></div>
         {filteredTasks.length ? <div className="task-list">{filteredTasks.map((task) => (
           <article className={`task-row ${task.status === 'done' ? 'completed' : ''}`} key={task.id}>
-            <button className={`complete-button ${task.status === 'done' ? 'checked' : ''}`} onClick={() => setTaskStatus(task.id, task.status === 'done' ? 'todo' : 'done')} aria-label={task.status === 'done' ? '标记为待处理' : '标记为已完成'}>{task.status === 'done' ? <Check size={16} /> : <Circle size={16} />}</button>
+            <button className={`complete-button ${task.status === 'done' ? 'checked' : ''}`} disabled={pending} onClick={() => void runAction(() => setTaskStatus(task.id, task.status === 'done' ? 'todo' : 'done'))} aria-label={task.status === 'done' ? '标记为待处理' : '标记为已完成'}>{task.status === 'done' ? <Check size={16} /> : <Circle size={16} />}</button>
             <div className="task-copy"><strong>{task.title}</strong><p>{task.description || '暂无任务描述'}</p><div className="task-meta"><span className={`priority-label ${task.priority}`}>{priorityLabels[task.priority]}</span><span><CalendarDays size={14} />{formatDate(task.dueDate)}</span><span className={`status-label ${task.status}`}>{statusLabels[task.status]}</span></div></div>
-            <div className="row-menu-wrap"><button className="icon-button row-menu-button" onClick={() => setMenuId(menuId === task.id ? null : task.id)} aria-label="任务操作"><MoreHorizontal size={19} /></button>{menuId === task.id && <div className="context-menu"><button onClick={() => openEdit(task)}><Edit3 size={16} />编辑任务</button><button className="danger" onClick={() => { deleteTask(task.id); setMenuId(null) }}><Trash2 size={16} />删除任务</button></div>}</div>
+            <div className="row-menu-wrap"><button className="icon-button row-menu-button" onClick={() => setMenuId(menuId === task.id ? null : task.id)} aria-label="任务操作"><MoreHorizontal size={19} /></button>{menuId === task.id && <div className="context-menu"><button onClick={() => openEdit(task)}><Edit3 size={16} />编辑任务</button><button className="danger" disabled={pending} onClick={() => void runAction(() => deleteTask(task.id))}><Trash2 size={16} />删除任务</button></div>}</div>
           </article>
         ))}</div> : <div className="empty-state"><span><ClipboardList size={29} /></span><h3>没有找到任务</h3><p>{query ? '尝试调整搜索关键词或筛选条件。' : '创建第一项任务，开始安排工作。'}</p><button className="button primary" onClick={() => setFormOpen(true)}><Plus size={17} />新建任务</button></div>}
       </section>

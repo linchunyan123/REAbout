@@ -182,3 +182,6 @@
     border-right-color: var(--border);
   }
 }
+
+.form-fields { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 18px; }
+button:disabled { opacity: .6; cursor: wait; }
