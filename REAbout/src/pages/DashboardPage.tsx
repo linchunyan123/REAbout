@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { ArrowRight, CalendarDays, CheckCircle2, CircleDashed, Clock3, ListTodo, Plus } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { dateKey, isOverdue } from '../task-utils'
 import { useTasks } from '../contexts/TaskContext'
 import type { TaskPriority, TaskStatus } from '../types/task'
 
@@ -11,16 +12,18 @@ export function DashboardPage() {
   const { tasks, settings } = useTasks()
   const completed = tasks.filter((task) => task.status === 'done').length
   const inProgress = tasks.filter((task) => task.status === 'in-progress').length
-  const upcoming = tasks.filter((task) => task.status !== 'done').slice(0, 4)
+  const upcoming = tasks.filter((task) => task.status !== 'done').sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 4)
   const completionRate = tasks.length ? Math.round((completed / tasks.length) * 100) : 0
 
   return (
     <div className="dashboard-stack">
+      <div className="dashboard-kicker"><span><span className="live-dot" />你的个人效率空间</span><span>FOCUS / PLAN / ACHIEVE</span></div>
       <section className="welcome-band">
         <div><span className="eyebrow">星期{getWeekday()} · {formatToday()}</span><h2>你好，{settings?.name || "我的工作区"}</h2><p>今天有 {tasks.filter((task) => task.status !== 'done').length} 项任务需要关注，先从最重要的开始。</p></div>
-        <Link to="/tasks" className="button light"><Plus size={18} />新建任务</Link>
+        <Link to="/tasks?new=1" className="button light"><Plus size={18} />新建任务</Link>
       </section>
 
+      <div className="quick-view-grid"><Link to="/tasks?due=today"><CalendarDays size={19} /><div><strong>今日待办</strong><span>聚焦今天需要完成的工作</span></div><b>{tasks.filter(t => t.dueDate === dateKey() && t.status !== 'done').length}</b><ArrowRight size={16} /></Link><Link to="/tasks?due=overdue"><Clock3 size={19} /><div><strong>逾期提醒</strong><span>调整计划，重新掌握节奏</span></div><b>{tasks.filter(t => isOverdue(t)).length}</b><ArrowRight size={16} /></Link><Link to="/calendar"><CalendarDays size={19} /><div><strong>日历计划</strong><span>一眼看清接下来的安排</span></div><ArrowRight size={16} /></Link></div>
       <section className="metric-grid" aria-label="任务数据概览">
         <Metric icon={<ListTodo />} label="全部任务" value={tasks.length} note="当前工作区" tone="blue" />
         <Metric icon={<CircleDashed />} label="进行中" value={inProgress} note="正在推进" tone="amber" />
@@ -33,12 +36,12 @@ export function DashboardPage() {
           <div className="panel-header"><div><h2>近期任务</h2><p>接下来需要推进的工作</p></div><Link to="/tasks" className="text-link">查看全部<ArrowRight size={16} /></Link></div>
           <div className="preview-list">
             {upcoming.length === 0 ? <div className="empty-inline">当前没有待处理任务</div> : upcoming.map((task) => (
-              <div className="preview-task" key={task.id}>
+              <Link to={`/tasks?q=${encodeURIComponent(task.title)}`} className="preview-task" key={task.id}>
                 <span className={`status-dot ${task.status}`} />
                 <div className="preview-main"><strong>{task.title}</strong><span><CalendarDays size={14} />{formatDate(task.dueDate)}</span></div>
                 <span className={`priority-tag ${task.priority}`}>{priorityLabels[task.priority]}</span>
                 <span className={`status-tag ${task.status}`}>{statusLabels[task.status]}</span>
-              </div>
+              </Link>
             ))}
           </div>
         </section>

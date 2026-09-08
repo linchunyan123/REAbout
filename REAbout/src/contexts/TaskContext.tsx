@@ -12,6 +12,7 @@ interface TaskContextValue {
   updateTask: (id: string, input: TaskInput) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   setTaskStatus: (id: string, status: TaskStatus) => Promise<void>
+  batchTasks: (ids: string[], action: TaskStatus | 'delete') => Promise<void>
   saveSettings: (input: Settings) => Promise<void>
 }
 const TaskContext = createContext<TaskContextValue | null>(null)
@@ -54,6 +55,11 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       setTasks(current => current.filter(task => task.id !== id))
     },
     setTaskStatus: async (id, status) => replace(await api<Task>(`/tasks/${id}/status`, 'PATCH', { status })),
+    batchTasks: async (ids, action) => {
+      const result = await api<{ tasks: Task[]; deletedIds: string[] }>('/tasks/batch', 'POST', { ids, action })
+      const updated = new Map(result.tasks.map(task => [task.id, task]))
+      setTasks(current => current.filter(task => !result.deletedIds.includes(task.id)).map(task => updated.get(task.id) ?? task))
+    },
     saveSettings: async input => setSettings(await api<Settings>('/settings', 'PUT', input)),
   }
   return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>

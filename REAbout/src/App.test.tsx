@@ -1,4 +1,4 @@
-﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -65,4 +65,27 @@ describe('FocusBoard API integration', () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/settings', expect.objectContaining({ method: 'PUT', body: expect.stringContaining('新名字') })))
     expect(await screen.findByText('已保存到云端')).toBeInTheDocument()
   })
+})
+
+it('opens a creation dialog directly from the dashboard', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(url.endsWith('settings') ? settings : initialTasks))))
+  renderApp()
+  await userEvent.click(await screen.findByRole('link', { name: '新建任务' }))
+  expect(await screen.findByRole('dialog', { name: '新建任务' })).toBeInTheDocument()
+  vi.unstubAllGlobals()
+})
+
+it('supports board status changes, date planning, and combined filters', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(url.endsWith('settings') ? settings : initialTasks))))
+  const user = userEvent.setup()
+  renderApp('/tasks?view=board&priority=high')
+  await screen.findByRole('button', { name: '看板' })
+  expect(screen.getByLabelText('优先级筛选')).toHaveValue('high')
+  await user.click(screen.getByRole('button', { name: '新建进行中任务' }))
+  expect(await screen.findByLabelText('状态')).toHaveValue('in-progress')
+  await user.click(screen.getByRole('button', { name: '取消' }))
+  await user.click(screen.getByRole('link', { name: '日历计划' }))
+  await user.click(await screen.findByRole('button', { name: '为这一天添加任务' }))
+  expect(await screen.findByLabelText('截止日期')).toHaveValue(new Date().toLocaleDateString('en-CA'))
+  vi.unstubAllGlobals()
 })

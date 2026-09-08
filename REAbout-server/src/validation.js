@@ -2,6 +2,12 @@ export function invalid(message) {
   return Object.assign(new Error(message), { status: 400 })
 }
 
+export function validateBatch(body) {
+  if (!body || !Array.isArray(body.ids) || body.ids.length < 1 || body.ids.length > 100 || body.ids.some(id => typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) throw invalid('请选择 1–100 个有效任务')
+  if (!['todo', 'in-progress', 'done', 'delete'].includes(body.action)) throw invalid('批量操作无效')
+  return { ids: [...new Set(body.ids)], action: body.action }
+}
+
 export function validateTask(body, statusOnly = false) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw invalid('请求内容必须是对象')
   if (!['todo', 'in-progress', 'done'].includes(body.status)) throw invalid('任务状态无效')

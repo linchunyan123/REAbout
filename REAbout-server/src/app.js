@@ -1,7 +1,7 @@
 import express from 'express'
 import helmet from 'helmet'
 import { fileURLToPath } from 'node:url'
-import { validateTask, validateSettings, invalid } from './validation.js'
+import { validateTask, validateSettings, validateBatch, invalid } from './validation.js'
 
 const columns = `id, title, description, status, priority, to_char(due_date, 'YYYY-MM-DD') AS "dueDate", created_at AS "createdAt"`
 
@@ -47,6 +47,15 @@ export function createApp(db, { serveFrontend = process.env.NODE_ENV === 'produc
     const t = validateTask(req.body)
     const result = await db.query(`INSERT INTO reabout.tasks (title, description, status, priority, due_date) VALUES ($1,$2,$3,$4,$5) RETURNING ${columns}`, [t.title, t.description, t.status, t.priority, t.dueDate])
     res.status(201).json(result.rows[0])
+  })
+  app.post('/api/tasks/batch', async (req, res) => {
+    const { ids, action } = validateBatch(req.body)
+    if (action === 'delete') {
+      const result = await db.query('DELETE FROM reabout.tasks WHERE id = ANY($1::uuid[]) RETURNING id', [ids])
+      return res.json({ tasks: [], deletedIds: result.rows.map(row => row.id) })
+    }
+    const result = await db.query(`UPDATE reabout.tasks SET status=$1 WHERE id = ANY($2::uuid[]) RETURNING ${columns}`, [action, ids])
+    res.json({ tasks: result.rows, deletedIds: [] })
   })
   app.put('/api/tasks/:id', async (req, res) => {
     const t = validateTask(req.body)

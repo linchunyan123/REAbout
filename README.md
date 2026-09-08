@@ -91,3 +91,29 @@ npm start
 当前 `REAbout/` 自带独立 Git 仓库，后端和根目录脚本在它之外；提交完整项目时需要将父目录纳入统一仓库或单独管理后端，不能只提交前端仓库。
 
 参考：[Express 5 错误处理](https://expressjs.com/en/5x/guide/error-handling/)、[node-postgres TLS](https://node-postgres.com/features/ssl)。
+
+## 工作台升级（2026-09-08）
+
+参考 Linear 的列表／看板与 Todoist 的日期筛选工作流，前端新增：
+
+- 首页今日待办、逾期提醒、日历入口；新建按钮直接打开表单，近期任务按截止日期排序。
+- 任务列表／看板切换，拖拽切换状态，也可使用下拉菜单操作（适合键盘与触屏）。
+- 名称和描述搜索、状态／优先级／日期组合筛选、四种排序；条件保存在 URL 中，支持刷新和分享当前视图。
+- 最多 100 项批量开始／完成／删除、单项复制、删除确认、结果提示与失败重试；CSV 导出当前筛选结果，并转义公式和引号。
+- 月历浏览、今天定位、每日任务清单、按所选日期新建／编辑任务。
+- 工作分析：真实完成率、未来 7 个自然日待办负载、优先级分布、最近 7 天任务创建数，支持跳转查看。
+- 紫色渐变视觉、深浅主题、手机布局、加载与空状态；Ctrl/Cmd+K 聚焦桌面搜索，原生弹窗支持焦点限制和 Escape 关闭。
+
+后端新增 `POST /api/tasks/batch`，请求示例：
+
+```json
+{"ids":["10000000-0000-0000-0000-000000000001"],"action":"done"}
+```
+
+`action` 支持 `todo`、`in-progress`、`done`、`delete`。接口校验 1–100 个 UUID 并去重，使用单条参数化 SQL 执行，返回 `{ "tasks": [], "deletedIds": [] }`；不存在的 ID 不做修改。无需新增依赖或数据库迁移。
+
+任务依旧使用原有单工作区数据模型。分析中的创建数量仅统计当前保留任务，不等同于历史完成趋势；通知开关仍只保存偏好。
+
+验证：`npm test`、`npm run build`、`npm run test:integration`。集成测试只操作自己创建的临时任务，覆盖新批量状态持久化和批量删除。
+
+参考：[Linear 看板](https://linear.app/docs/board-layout)、[Todoist 筛选](https://www.todoist.com/help/todoist/features/introduction-to-filters-V98wIH)。

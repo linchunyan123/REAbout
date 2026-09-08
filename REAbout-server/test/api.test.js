@@ -30,3 +30,25 @@ test('API validation, parameterized writes, missing records and sanitized errors
     assert.equal((await fetch(`${url}/missing`)).status, 404)
   } finally { await new Promise(resolve => server.close(resolve)) }
 })
+
+test('batch actions validate input and use one parameterized statement', async () => {
+  const calls = []
+  const id = '10000000-0000-0000-0000-000000000001'
+  const db = { query: async (sql, args) => { calls.push([sql, args]); return { rows: [{ id, status: 'done' }], rowCount: 1 } } }
+  const server = createApp(db).listen(0, '127.0.0.1')
+  await new Promise(resolve => server.once('listening', resolve))
+  const request = body => fetch(`http://127.0.0.1:${server.address().port}/api/tasks/batch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  try {
+    for (const body of [null, {}, { ids: [], action: 'done' }, { ids: ['bad'], action: 'done' }, { ids: [id], action: 'bad' }, { ids: Array(101).fill(id), action: 'done' }]) assert.equal((await request(body)).status, 400)
+    assert.equal(calls.length, 0)
+    const update = await request({ ids: [id, id], action: 'done' })
+    assert.equal(update.status, 200)
+    assert.equal((await update.json()).tasks[0].status, 'done')
+    assert.deepEqual(calls[0][1], ['done', [id]])
+    assert.ok(calls[0][0].includes('ANY($2::uuid[])'))
+    assert.equal(calls.length, 1)
+    const deletion = await request({ ids: [id], action: 'delete' })
+    assert.deepEqual((await deletion.json()).deletedIds, [id])
+    assert.ok(calls[1][0].includes('RETURNING id'))
+  } finally { await new Promise(resolve => server.close(resolve)) }
+})

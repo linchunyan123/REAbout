@@ -20,12 +20,15 @@ try {
   assert.equal((await pool.query('SELECT title FROM reabout.tasks WHERE id=$1', [id])).rows[0].title, input.title)
   assert.equal((await request(`/tasks/${id}`, 'PUT', { ...input, title: 'Updated integration task' })).title, 'Updated integration task')
   assert.equal((await request(`/tasks/${id}/status`, 'PATCH', { status: 'done' })).status, 'done')
+  const batch = await request('/tasks/batch', 'POST', { ids: [id], action: 'in-progress' })
+  assert.equal(batch.tasks[0].status, 'in-progress')
+  assert.equal((await request('/tasks')).find(t => t.id === id).status, 'in-progress')
   const settings = await request('/settings')
   assert.equal(typeof settings.name, 'string')
-  await request(`/tasks/${id}`, 'DELETE', {})
+  assert.deepEqual((await request('/tasks/batch', 'POST', { ids: [id], action: 'delete' })).deletedIds, [id])
   assert.ok(!(await request('/tasks')).some(t => t.id === id))
   id = undefined
-  console.log('PASS: Neon health, create, read, SQL persistence, update, status, settings read, delete')
+  console.log('PASS: Neon health, create, read, SQL persistence, update, status, settings read, batch status persistence, batch delete')
 } catch (error) {
   console.error('Integration failed:', error.code ?? error.message)
   process.exitCode = 1
