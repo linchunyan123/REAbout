@@ -1,19 +1,15 @@
 # ============ 构建配置 ============
 [build]
-  # 根目录就是 Test/
-  base = "/"
-  # 使用你根目录 package.json 里的 build 命令
-  command = "npm run build"
-  # ⚠️ 关键：告诉 Netlify 构建产物在 REAbout/dist
-  publish = "REAbout/dist"
+  base = "REAbout"           # 直接进入前端目录
+  command = "npm run build"  # 在 REAbout 目录下执行
+  publish = "dist"           # 产物在 REAbout/dist
 
 [build.environment]
   NODE_VERSION = "18"
 
-# ============ 后端 Functions 配置 ============
+# 如果后端也要部署
 [functions]
-  # 如果 REAbout-server 是 Netlify Functions
-  directory = "REAbout-server/functions"
+  directory = "../REAbout-server/functions"
 
 # ============ 路由配置 ============
 # 所有 /api/* 请求转发到后端函数
