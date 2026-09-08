@@ -5,15 +5,27 @@ import { validateTask, validateSettings, invalid } from './validation.js'
 
 const columns = `id, title, description, status, priority, to_char(due_date, 'YYYY-MM-DD') AS "dueDate", created_at AS "createdAt"`
 
-export function createApp(db, { serveFrontend = process.env.NODE_ENV === 'production' } = {}) {
+function isSiteOrigin(origin, siteName) {
+  if (!siteName) return false
+  try {
+    const url = new URL(origin)
+    if (url.origin !== origin || url.protocol !== 'https:' || url.port) return false
+    const hostname = `${siteName}.netlify.app`
+    if (url.hostname === hostname) return true
+    const suffix = `--${hostname}`
+    return url.hostname.endsWith(suffix) && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(url.hostname.slice(0, -suffix.length))
+  } catch { return false }
+}
+
+export function createApp(db, { serveFrontend = process.env.NODE_ENV === 'production', netlifySiteName } = {}) {
   const app = express()
   app.disable('x-powered-by')
   app.use(helmet())
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store')
     if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-      const allowedOrigins = [process.env.APP_ORIGIN || 'http://localhost:5173', process.env.URL, process.env.DEPLOY_URL, process.env.DEPLOY_PRIME_URL].filter(Boolean)
-      if (req.headers.origin && !allowedOrigins.includes(req.headers.origin)) return res.status(403).json({ message: '请求来源不允许' })
+      const allowedOrigins = [process.env.APP_ORIGIN || 'http://localhost:5173', process.env.URL].filter(Boolean)
+      if (req.headers.origin && !allowedOrigins.includes(req.headers.origin) && !isSiteOrigin(req.headers.origin, netlifySiteName)) return res.status(403).json({ message: '请求来源不允许' })
       if (!req.is('application/json')) return res.status(415).json({ message: '请使用 application/json' })
     }
     next()

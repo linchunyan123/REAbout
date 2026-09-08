@@ -68,7 +68,7 @@ npm run test:integration
 
 1. 连接整个仓库，将 Base directory 设为根目录（留空或 `.`），不要继续指向 `REAbout`。构建配置以根目录 `netlify.toml` 为准。
 2. 在 Netlify 项目环境变量中设置 `DATABASE_URL`（使用本地后端 `.env` 中的连接串，标记为敏感变量，必须对 Functions 和目标部署环境生效）。不要添加 `VITE_` 前缀，不要提交 `.env`。
-3. 设置 `APP_ORIGIN` 为实际访问的网址 origin，例如 `https://incomparable-kitsune-e75f0e.netlify.app`，不带路径和末尾斜杠。若使用独立预览网址且遇到 403，则对该部署环境配置对应 origin。接口也允许运行时可用的 Netlify `URL`、`DEPLOY_URL`、`DEPLOY_PRIME_URL` 精确地址。
+3. 设置 `APP_ORIGIN` 为站点主域名，例如 `https://incomparable-kitsune-e75f0e.netlify.app`，不带路径和末尾斜杠。云函数利用 Netlify 运行时自动提供的 `SITE_NAME`，允许该站点的 HTTPS 主域名、部署永久链接、Deploy Preview 和分支域名；点击 Preview 无需每次修改变量。其他站点、伪造后缀和非标准端口不被允许。自定义域名可通过 `APP_ORIGIN` 或 Netlify 自动提供的 `URL` 精确允许。
 4. 提交并推送修改后重新部署。检查 Functions 中存在 `api`，访问新部署的 `/api/health`，应返回 `{"status":"ok","database":"connected"}`。
 
 数据库已经初始化；不需要每次网站构建都连接数据库或执行迁移。旧的带部署 ID 的固定网址不会变成新版本，请访问新部署地址或站点主域名。
